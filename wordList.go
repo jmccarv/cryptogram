@@ -20,10 +20,11 @@ type word struct {
 }
 
 type wordMap struct {
-	words      map[string]word
-	pattern    map[int][]word
-	letterFreq [256]int
-	letterPct  [265]float64
+	words        map[string]word
+	pattern      map[int][]word
+	letterFreq   [256]int
+	letterPct    [265]float64
+	maxLetterPct float64
 }
 
 func (w word) String() string {
@@ -167,6 +168,9 @@ func (m *wordMap) readWordList(fn string) {
 
 	for c := 'A'; c <= 'Z'; c++ {
 		m.letterPct[c] = float64(m.letterFreq[c]) / float64(nrLetters)
+		if m.letterPct[c] > m.maxLetterPct {
+			m.maxLetterPct = m.letterPct[c]
+		}
 	}
 
 	// Sort each list in descending order of frequency

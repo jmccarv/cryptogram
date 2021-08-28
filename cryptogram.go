@@ -139,7 +139,7 @@ func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, sch chan solut
 		if !s.tryWord(cw, w) {
 			s.nrUnsolved++
 			// No words worked with the current solution
-			if s.nrUnsolved >= maxUnsolved {
+			if s.nrUnsolved > maxUnsolved {
 				return
 			}
 		}

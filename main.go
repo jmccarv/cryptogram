@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -65,6 +67,9 @@ func main() {
 	}
 	defer cgFile.Close()
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT)
+
 	s := bufio.NewScanner(cgFile)
 	lno := 0
 	for s.Scan() {
@@ -84,6 +89,15 @@ func main() {
 		if maxRuntime > 0 {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRuntime)
 		}
+
+		go func() {
+			select {
+			case <-sigs:
+				cancelFunc()
+			case <-ctx.Done():
+				return
+			}
+		}()
 
 		sch := make(chan solution)
 		nrFound := 0
@@ -106,6 +120,7 @@ func main() {
 
 		start := time.Now()
 		cg.solve(ctx, maxUnknown, sch)
+		cancelFunc()
 		close(sch)
 		fmt.Println("Evaluated", nrFound, "solutions in", time.Now().Sub(start))
 	}

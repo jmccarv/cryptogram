@@ -5,14 +5,21 @@ import (
 )
 
 type solution struct {
-	key         [91]byte
-	letterUsed  [91]bool
-	nrUnsolved  int
+	key        [91]byte
+	letterUsed [91]bool
+	nrUnsolved int
+
+	// percentage (1-100), 100% would be if every word in the solution
+	// contained only the most common letter, like 'EEE EE...', which can
+	// obviously never happen, but that's how this score is calculated.
 	letterScore float64
-	wordScore   int
-	decoded     []cryptogramWord
-	decodeDone  bool
-	scoreDone   bool
+
+	// average of all word frequencies in the solution
+	wordScore float64
+
+	decoded    []cryptogramWord
+	decodeDone bool
+	scoreDone  bool
 }
 
 func (sorig *solution) tryWord(cw *cryptogramWord, w word) bool {
@@ -47,15 +54,14 @@ func (s *solution) score(cg cryptogram) {
 		}
 
 		x := words.find(w.letters)
-		s.wordScore += x.freq * w.freq
+		s.wordScore += float64(x.freq*w.freq) / float64(len(cg.words))
 
 		for _, c := range w.letters {
 			//fmt.Printf("%c %0.2f", c, words.letterPct[c])
 			s.letterScore += words.letterPct[c] * float64(w.freq)
 		}
 	}
-	//fmt.Println("letter score: ", s.letterScore)
-	s.letterScore /= float64(cg.nrLetters)
+	s.letterScore = s.letterScore / float64(cg.nrLetters) / words.maxLetterPct * 100
 }
 
 func (s *solution) decode(cg cryptogram) {
@@ -86,7 +92,7 @@ func (s solution) decodedString(cg cryptogram) string {
 
 	s.score(cg)
 
-	ret = fmt.Sprintf("Letter: %0.6f  Word: %d  ", s.letterScore, s.wordScore)
+	ret = fmt.Sprintf("Letter: %8.6f%%  Word: %f  ", s.letterScore, s.wordScore)
 	for _, w := range s.decoded {
 		ret += string(w.letters)
 	}
