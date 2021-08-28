@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"runtime"
@@ -48,6 +49,7 @@ func getNextCGWord(cgLine []byte) *cryptogramWord {
 }
 
 func newCryptogram(cgLine []byte) (cryptogram, error) {
+	cgLine = bytes.ToUpper(cgLine)
 	cg := cryptogram{uniqueWords: make(map[string]*cryptogramWord)}
 
 	if len(cgLine) < 1 {

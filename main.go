@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -74,7 +73,7 @@ func main() {
 	lno := 0
 	for s.Scan() {
 		lno++
-		cg, err := newCryptogram(bytes.ToUpper(s.Bytes()))
+		cg, err := newCryptogram(s.Bytes())
 		ss := newSolutionSet(topN, cg)
 
 		if err != nil {
@@ -119,6 +118,8 @@ func main() {
 		}(sch)
 
 		start := time.Now()
+
+		fmt.Printf("\n%v\n", cg)
 		cg.solve(ctx, maxUnknown, sch)
 		cancelFunc()
 		close(sch)
