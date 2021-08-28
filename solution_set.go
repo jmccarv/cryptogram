@@ -12,6 +12,9 @@ type solutionSet struct {
 }
 
 func newSolutionSet(size int, cg cryptogram) solutionSet {
+	if size < 1 {
+		size = 1
+	}
 	return solutionSet{make([]solution, 0, size+1), size, cg}
 }
 

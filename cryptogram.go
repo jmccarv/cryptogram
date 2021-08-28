@@ -153,6 +153,10 @@ func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, sch chan solut
 	}
 
 	for _, w := range words.forPattern(cw.pattern) {
+		if ctx.Err() != nil {
+			break
+		}
+
 		select {
 		case bucket <- nil:
 			wg.Add(1)
