@@ -28,6 +28,11 @@ func (sorig *solution) tryWord(cw *cryptogramWord, w word) bool {
 	for i, cc := range cw.letters {
 		wc := w.letters[i]
 
+		// By default cryptograms never map a letter to itself
+		if !allowMapSelf && wc == cc && wc != '\'' {
+			return false
+		}
+
 		if s.key[cc] == 0 && !s.letterUsed[wc] {
 			s.key[cc] = wc
 			s.letterUsed[wc] = true

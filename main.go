@@ -18,6 +18,7 @@ var (
 	topN         int
 	maxSolutions int
 	maxUnknown   int
+	allowMapSelf bool
 )
 
 var validLetter [256]bool
@@ -41,6 +42,7 @@ func main() {
 	flag.IntVar(&maxSolutions, "s", 0, "shortcut for -max-solve")
 	flag.IntVar(&maxUnknown, "max-unknown", 0, "Maximum allowed unknown words")
 	flag.IntVar(&maxUnknown, "u", 0, "shortcut for -max-unknown")
+	flag.BoolVar(&allowMapSelf, "map-self", false, "Allow encrypted letter to map to itself")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
