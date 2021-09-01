@@ -22,10 +22,30 @@ type solution struct {
 	scoreDone  bool
 }
 
+func (s solution) String() string {
+	ret := make([]byte, 26)
+	i := 0
+	for _, c := range s.key['A' : 'Z'+1] {
+		switch c {
+		case 0:
+			ret[i] = ' '
+		default:
+			ret[i] = c
+		}
+		i++
+	}
+	return string(ret)
+}
+
 func (sorig *solution) tryWord(cw *cryptogramWord, w word) bool {
+	if len(w.letters) == 0 {
+		return false
+	}
+
 	s := *sorig
 
 	for i, cc := range cw.letters {
+		//fmt.Println("cw:", string(cw.letters), "  w:", string(w.letters))
 		wc := w.letters[i]
 
 		// By default cryptograms never map a letter to itself

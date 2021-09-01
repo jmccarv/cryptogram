@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -19,6 +20,7 @@ var (
 	maxSolutions int
 	maxUnknown   int
 	allowMapSelf bool
+	maxParallel  = runtime.NumCPU() * 2
 )
 
 var validLetter [256]bool
@@ -43,6 +45,7 @@ func main() {
 	flag.IntVar(&maxUnknown, "max-unknown", 0, "Maximum allowed unknown words")
 	flag.IntVar(&maxUnknown, "u", 0, "shortcut for -max-unknown")
 	flag.BoolVar(&allowMapSelf, "map-self", false, "Allow encrypted letter to map to itself")
+	flag.IntVar(&maxParallel, "p", maxParallel, "Number of worker threads to run")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
@@ -53,6 +56,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	if maxParallel < 1 {
+		maxParallel = 1
+	}
 
 	words.readWordList(freqFile)
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"runtime"
+	//"runtime"
 	"sort"
 	"sync"
 )
@@ -105,6 +105,62 @@ func (cg cryptogram) nrWords() int {
 	return len(cg.words)
 }
 
+type workerData struct {
+	solution
+	cgWords []*cryptogramWord
+	start   word
+}
+
+func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, s solution, cgWords []*cryptogramWord, start word, sch chan solution) {
+	triedUnknown := false
+	if !s.tryWord(cgWords[0], start) {
+		s.nrUnsolved++
+		if s.nrUnsolved > maxUnsolved {
+			return
+		}
+		triedUnknown = true
+	}
+
+	if len(cgWords[1:]) < 1 {
+		// no encrypted words left to solve for, send our solution
+		sch <- s
+		return
+	}
+
+	cgWords = cgWords[1:]
+
+	for _, w := range words.forPattern(cgWords[0].pattern) {
+		if ctx.Err() != nil {
+			break
+		}
+
+		cg.solveR(ctx, maxUnsolved, s, cgWords, w, sch)
+	}
+
+	if s.nrUnsolved < maxUnsolved && !triedUnknown {
+		cg.solveR(ctx, maxUnsolved, s, cgWords, word{}, sch)
+	}
+}
+
+func (cg cryptogram) solveWorker(ctx context.Context, maxUnsolved int, workCh chan workerData, sch chan solution) {
+	for {
+		var d workerData
+		var ok bool
+
+		select {
+		case d, ok = <-workCh:
+			if !ok {
+				return
+			}
+			break
+		case <-ctx.Done():
+			return
+		}
+
+		cg.solveR(ctx, maxUnsolved, d.solution, d.cgWords, d.start, sch)
+	}
+}
+
 func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan solution) {
 	// Get a list of the unique code words to solve.
 	cgWords := make([]*cryptogramWord, 0, len(cg.uniqueWords))
@@ -119,65 +175,35 @@ func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan soluti
 		return len(words.forPattern(cgWords[i].pattern)) < len(words.forPattern(cgWords[j].pattern))
 	})
 
-	// Now we can attempt a solve
-	s := solution{}
-	s.key['\''] = '\''
-	s.letterUsed['\''] = true
-
-	cg.solveR(ctx, maxUnsolved, sch, s, cgWords)
-}
-
-var bucket chan interface{}
-
-func init() {
-	bucket = make(chan interface{}, runtime.NumCPU()*2)
-}
-
-func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, sch chan solution, s solution, cgWords []*cryptogramWord) {
-	cw := cgWords[0]
+	wch := make(chan workerData)
+	// Spawn workers here
+	// cgWords
 	var wg sync.WaitGroup
-
-	solve := func(s solution, w word) {
-		if !s.tryWord(cw, w) {
-			s.nrUnsolved++
-			// No words worked with the current solution
-			if s.nrUnsolved > maxUnsolved {
-				return
-			}
-		}
-
-		if len(cgWords) > 1 {
-			cg.solveR(ctx, maxUnsolved, sch, s, cgWords[1:])
-		} else {
-			// We're on the last word in cgWords[] so here we can report our solution
-			sch <- s
-		}
+	for i := 0; i < maxParallel; i++ {
+		wg.Add(1)
+		go func() {
+			cg.solveWorker(ctx, maxUnsolved, wch, sch)
+			wg.Done()
+		}()
 	}
 
-	for _, w := range words.forPattern(cw.pattern) {
+	try := func(w word) {
+		s := solution{}
+		s.key['\''] = '\''
+		s.letterUsed['\''] = true
+		wch <- workerData{solution: s, cgWords: cgWords, start: w}
+	}
+
+	for _, w := range words.forPattern(cgWords[0].pattern) {
 		if ctx.Err() != nil {
 			break
 		}
 
-		select {
-		case bucket <- nil:
-			wg.Add(1)
-			go func(s solution, w word) {
-				solve(s, w)
-				<-bucket
-				wg.Done()
-			}(s, w)
-		default:
-			solve(s, w)
-		}
+		try(w)
 	}
-
-	/*
-		if len(cgWords) > 1 && s.nrUnsolved < maxUnsolved {
-			s.nrUnsolved++
-			cg.solveR(ctx, maxUnsolved, sch, s, cgWords[1:])
-		}
-	*/
-
+	if maxUnknown > 0 {
+		try(word{})
+	}
+	close(wch)
 	wg.Wait()
 }

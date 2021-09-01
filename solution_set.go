@@ -6,20 +6,27 @@ import (
 )
 
 type solutionSet struct {
-	set []solution
-	nr  int
-	cg  cryptogram
+	set  []solution
+	seen map[string]bool
+	nr   int
+	cg   cryptogram
 }
 
 func newSolutionSet(size int, cg cryptogram) solutionSet {
 	if size < 1 {
 		size = 1
 	}
-	return solutionSet{make([]solution, 0, size+1), size, cg}
+	return solutionSet{make([]solution, 0, size+1), make(map[string]bool), size, cg}
 }
 
 // return true if we added s to the set
 func (ss *solutionSet) add(s solution) bool {
+	str := s.String()
+	//fmt.Printf("sln: '%s'\n", str)
+	if ss.seen[str] {
+		return false
+	}
+	ss.seen[str] = true
 	s.score(ss.cg)
 
 	if len(ss.set) >= ss.nr {
