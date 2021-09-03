@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"syscall"
 	"time"
 )
@@ -21,6 +23,8 @@ var (
 	maxUnknown   int
 	allowMapSelf bool
 	maxParallel  = runtime.NumCPU() * 2
+	cpuprofile   string
+	memprofile   string
 )
 
 var validLetter [256]bool
@@ -46,6 +50,8 @@ func main() {
 	flag.IntVar(&maxUnknown, "u", 0, "shortcut for -max-unknown")
 	flag.BoolVar(&allowMapSelf, "map-self", false, "Allow encrypted letter to map to itself")
 	flag.IntVar(&maxParallel, "p", maxParallel, "Number of worker threads to run")
+	flag.StringVar(&cpuprofile, "cpuprofile", "", "Write cpu profile to 'file'")
+	flag.StringVar(&memprofile, "memprofile", "", "Write memory profile to 'file'")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
@@ -59,6 +65,18 @@ func main() {
 
 	if maxParallel < 1 {
 		maxParallel = 1
+	}
+
+	if cpuprofile != "" {
+		f, err := os.Create(cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
 
 	words.readWordList(freqFile)
@@ -133,5 +151,17 @@ func main() {
 		cancelFunc()
 		close(sch)
 		fmt.Println("Evaluated", nrFound, "solutions in", time.Now().Sub(start))
+
+		if memprofile != "" {
+			f, err := os.Create(memprofile)
+			if err != nil {
+				log.Fatal("could not create memory profile: ", err)
+			}
+			defer f.Close() // error handling omitted for example
+			runtime.GC()    // get up-to-date statistics
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				log.Fatal("could not write memory profile: ", err)
+			}
+		}
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	//"runtime"
 	"sort"
 	"sync"
 )
@@ -129,11 +128,11 @@ func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, s solution, cg
 
 	cgWords = cgWords[1:]
 
-	for _, w := range words.forPattern(cgWords[0].pattern) {
-		if ctx.Err() != nil {
-			break
-		}
+	if ctx.Err() != nil {
+		return
+	}
 
+	for _, w := range words.forPattern(cgWords[0].pattern) {
 		cg.solveR(ctx, maxUnsolved, s, cgWords, w, sch)
 	}
 
@@ -193,6 +192,7 @@ func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan soluti
 		s.letterUsed['\''] = true
 		wch <- workerData{solution: s, cgWords: cgWords, start: w}
 	}
+	fmt.Printf("%s has %d possible solutions\n", string(cgWords[0].letters), len(words.forPattern(cgWords[0].pattern)))
 
 	for _, w := range words.forPattern(cgWords[0].pattern) {
 		if ctx.Err() != nil {
