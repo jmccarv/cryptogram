@@ -115,8 +115,6 @@ func main() {
 		}
 
 		cg, err := newCryptogram(line)
-		cg.initialMap = key
-
 		if err != nil {
 			fmt.Printf("skipping cryptogram on line %v: %v", lno, err)
 			continue
@@ -125,12 +123,14 @@ func main() {
 			continue
 		}
 
+		cg.initialMap = key
 		ss := newSolutionSet(topN, cg)
 
 		if maxRuntime > 0 {
-			ctx, _ = context.WithTimeout(ctx, maxRuntime)
+			ctx, cancelFunc = context.WithTimeout(ctx, maxRuntime)
 		}
 
+		// Signal handler, INT (Ctrl-C) aborts current cryptogram
 		go func() {
 			select {
 			case <-sigs:
@@ -140,6 +140,8 @@ func main() {
 			}
 		}()
 
+		// This routine accepts solutions from the solver and adds them
+		// to our solution set.
 		sch := make(chan solution)
 		nrFound := 0
 		go func(sch chan solution) {
@@ -159,15 +161,22 @@ func main() {
 			}
 		}(sch)
 
+		// Now we can start the solver for this cryptogram
 		start := time.Now()
-
 		fmt.Printf("\n%v\n", cg)
 		fmt.Printf("Using Key: %v\n", cg.initialMap)
+
+		// Won't return until all workers have stopped, which means
+		// nothing will write to sch after this returns
 		cg.solve(ctx, maxUnknown, sch)
-		cancelFunc()
-		close(sch)
+
+		// Tidy up
+		cancelFunc() // Will shut down the signal handler if it's still running
+		close(sch)   // Shuts down our solution reader routine
+
 		fmt.Println("Evaluated", nrFound, "solutions in", time.Now().Sub(start))
 
+		// Reset for next cryptogram
 		ctx, cancelFunc = context.WithCancel(context.Background())
 		key = startingKey
 	}
