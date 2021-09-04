@@ -21,6 +21,16 @@ type cryptogram struct {
 	words       []*cryptogramWord
 	uniqueWords map[string]*cryptogramWord
 	nrLetters   int // number of non-whitespace characters
+	initialMap  keyMap
+}
+
+var validLetter [256]bool
+
+func init() {
+	validLetter['\''] = true
+	for x := 'A'; x <= 'Z'; x++ {
+		validLetter[x] = true
+	}
 }
 
 func getNextCGWord(cgLine []byte) *cryptogramWord {
@@ -30,10 +40,10 @@ func getNextCGWord(cgLine []byte) *cryptogramWord {
 		return nil
 	}
 
-	want := validLetter[cgLine[0]]
+	w.whitespace = !validLetter[cgLine[0]]
 	func() {
 		for i, c := range cgLine {
-			if validLetter[c] != want {
+			if validLetter[c] == w.whitespace {
 				w.letters = append(w.letters, cgLine[:i]...)
 				return
 			}
@@ -41,7 +51,6 @@ func getNextCGWord(cgLine []byte) *cryptogramWord {
 		w.letters = append(w.letters, cgLine...)
 	}()
 	w.pattern = wordPattern(w.letters)
-	w.whitespace = !want
 	w.freq = 1
 
 	return w

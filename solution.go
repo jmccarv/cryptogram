@@ -4,9 +4,13 @@ import (
 	"fmt"
 )
 
-type solution struct {
+type keyMap struct {
 	key        [91]byte
 	letterUsed [91]bool
+}
+
+type solution struct {
+	keyMap
 	nrUnsolved int
 
 	// percentage (1-100), 100% would be if every word in the solution
@@ -42,8 +46,6 @@ func (sorig *solution) tryWord(cw *cryptogramWord, w word) bool {
 		return false
 	}
 
-	s := *sorig
-
 	for i, cc := range cw.letters {
 		//fmt.Println("cw:", string(cw.letters), "  w:", string(w.letters))
 		wc := w.letters[i]
@@ -52,6 +54,13 @@ func (sorig *solution) tryWord(cw *cryptogramWord, w word) bool {
 		if !allowMapSelf && wc == cc && wc != '\'' {
 			return false
 		}
+	}
+
+	s := *sorig
+
+	for i, cc := range cw.letters {
+		//fmt.Println("cw:", string(cw.letters), "  w:", string(w.letters))
+		wc := w.letters[i]
 
 		if s.key[cc] == 0 && !s.letterUsed[wc] {
 			s.key[cc] = wc
