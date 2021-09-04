@@ -4,11 +4,6 @@ import (
 	"fmt"
 )
 
-type keyMap struct {
-	key        [91]byte
-	letterUsed [91]bool
-}
-
 type solution struct {
 	keyMap
 	nrUnsolved int

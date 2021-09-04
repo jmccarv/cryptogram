@@ -59,6 +59,8 @@ func getNextCGWord(cgLine []byte) *cryptogramWord {
 func newCryptogram(cgLine []byte) (cryptogram, error) {
 	cgLine = bytes.ToUpper(cgLine)
 	cg := cryptogram{uniqueWords: make(map[string]*cryptogramWord)}
+	cg.initialMap.key['\''] = '\''
+	cg.initialMap.letterUsed['\''] = true
 
 	if len(cgLine) < 1 {
 		return cg, nil
@@ -196,9 +198,7 @@ func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan soluti
 	}
 
 	try := func(w word) {
-		s := solution{}
-		s.key['\''] = '\''
-		s.letterUsed['\''] = true
+		s := solution{keyMap: cg.initialMap}
 		wch <- workerData{solution: s, cgWords: cgWords, start: w}
 	}
 	fmt.Printf("%s has %d possible solutions\n", string(cgWords[0].letters), len(words.forPattern(cgWords[0].pattern)))

@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"regexp"
 	"runtime"
 	"runtime/pprof"
 	"syscall"
@@ -25,7 +26,7 @@ var (
 	maxParallel  = runtime.NumCPU() * 2
 	cpuprofile   string
 	memprofile   string
-	initSoln     string
+	initKey      string
 )
 
 var words = wordMap{}
@@ -40,7 +41,7 @@ func main() {
 	flag.IntVar(&maxParallel, "p", maxParallel, "Number of worker threads to run")
 	flag.StringVar(&cpuprofile, "cpuprofile", "", "Write cpu profile to 'file'")
 	flag.StringVar(&memprofile, "memprofile", "", "Write memory profile to 'file'")
-	flag.StringVar(&initSoln, "key", "", "Initial key mapping in the form 'ABC=XYZ[, ]...'")
+	flag.StringVar(&initKey, "key", "", "Initial key mapping in the form 'ABC=XYZ[, ]...'")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
@@ -92,10 +93,29 @@ func main() {
 	lno := 0
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
+	rxComment := regexp.MustCompile(`^\s*#`)
+
+	var startingKey keyMap
+	if k, ok := parseKeyMap([]byte(initKey)); ok {
+		startingKey = k
+	}
+	key := startingKey
+
 	for s.Scan() {
 		lno++
-		cg, err := newCryptogram(s.Bytes())
-		ss := newSolutionSet(topN, cg)
+		line := s.Bytes()
+
+		if rxComment.Match(line) {
+			continue
+		}
+
+		if k, ok := parseKeyMap(line); ok {
+			key = k
+			continue
+		}
+
+		cg, err := newCryptogram(line)
+		cg.initialMap = key
 
 		if err != nil {
 			fmt.Printf("skipping cryptogram on line %v: %v", lno, err)
@@ -104,6 +124,8 @@ func main() {
 		if cg.nrWords() < 1 {
 			continue
 		}
+
+		ss := newSolutionSet(topN, cg)
 
 		if maxRuntime > 0 {
 			ctx, _ = context.WithTimeout(ctx, maxRuntime)
@@ -140,21 +162,25 @@ func main() {
 		start := time.Now()
 
 		fmt.Printf("\n%v\n", cg)
+		fmt.Printf("Using Key: %v\n", cg.initialMap)
 		cg.solve(ctx, maxUnknown, sch)
 		cancelFunc()
 		close(sch)
 		fmt.Println("Evaluated", nrFound, "solutions in", time.Now().Sub(start))
 
-		if memprofile != "" {
-			f, err := os.Create(memprofile)
-			if err != nil {
-				log.Fatal("could not create memory profile: ", err)
-			}
-			defer f.Close() // error handling omitted for example
-			runtime.GC()    // get up-to-date statistics
-			if err := pprof.WriteHeapProfile(f); err != nil {
-				log.Fatal("could not write memory profile: ", err)
-			}
+		ctx, cancelFunc = context.WithCancel(context.Background())
+		key = startingKey
+	}
+
+	if memprofile != "" {
+		f, err := os.Create(memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		runtime.GC()    // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
 		}
 	}
 }

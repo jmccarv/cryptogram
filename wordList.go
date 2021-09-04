@@ -175,7 +175,7 @@ func (m *wordMap) readWordList(fn string) {
 
 	// Sort each list in descending order of frequency
 	m.sort()
-	m.dispFreqs()
+	//m.dispFreqs()
 }
 
 type freqs struct {
