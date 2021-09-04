@@ -23,7 +23,7 @@ var (
 	maxSolutions int
 	maxUnknown   int
 	allowMapSelf bool
-	maxParallel  = runtime.NumCPU() * 2
+	maxParallel  = runtime.NumCPU()
 	cpuprofile   string
 	memprofile   string
 	initKey      string
