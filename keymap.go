@@ -11,9 +11,18 @@ type keyMap struct {
 	letterUsed [91]bool
 }
 
-func parseKeyMap(line []byte) (keyMap, bool) {
+func newKeyMap() keyMap {
 	k := keyMap{}
-	rxKey := regexp.MustCompile(`\s*([A-Z]+=[A-Z]+)(?:[ ,]|$)`)
+
+	k.key['\''] = '\''
+	k.letterUsed['\''] = true
+
+	return k
+}
+
+func parseKeyMap(line []byte) (keyMap, bool) {
+	k := newKeyMap()
+	rxKey := regexp.MustCompile(`\s*([A-Z']+=[A-Z']+)(?:[ ,]|$)`)
 
 	mappings := rxKey.FindAllSubmatch(bytes.ToUpper(line), -1)
 	if len(mappings) == 0 {
@@ -23,7 +32,7 @@ func parseKeyMap(line []byte) (keyMap, bool) {
 	for _, m := range mappings {
 		kv := bytes.SplitN(m[1], []byte("="), 2)
 		if len(kv) != 2 || len(kv[0]) != len(kv[1]) {
-			fmt.Printf("Invalid Key Map %s", string(m[1]))
+			fmt.Printf("Invalid Key Map %s in %s\n", string(m[1]), string(line))
 			return k, false
 		}
 
@@ -47,7 +56,7 @@ func (km keyMap) String() string {
 			continue
 		}
 
-		ret += fmt.Sprintf("%c-%c ", i, c)
+		ret += fmt.Sprintf("%c=%c ", i, c)
 	}
 
 	return ret

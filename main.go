@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/pprof"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -27,6 +29,7 @@ var (
 	cpuprofile   string
 	memprofile   string
 	initKey      string
+	progress     bool
 )
 
 var words = wordMap{}
@@ -38,10 +41,11 @@ func main() {
 	flag.IntVar(&maxSolutions, "s", 0, "Stop searching after finding this many solutions")
 	flag.IntVar(&maxUnknown, "u", 0, "Maximum allowed unknown words")
 	flag.BoolVar(&allowMapSelf, "map-self", false, "Allow encrypted letter to map to itself")
-	flag.IntVar(&maxParallel, "p", maxParallel, "Number of worker threads to run")
+	flag.IntVar(&maxParallel, "w", maxParallel, "Number of worker threads to run")
 	flag.StringVar(&cpuprofile, "cpuprofile", "", "Write cpu profile to 'file'")
 	flag.StringVar(&memprofile, "memprofile", "", "Write memory profile to 'file'")
 	flag.StringVar(&initKey, "key", "", "Initial key mapping in the form 'ABC=XYZ[, ]...'")
+	flag.BoolVar(&progress, "p", false, "Display solutions as they're found instead of only when complete")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
@@ -95,7 +99,7 @@ func main() {
 
 	rxComment := regexp.MustCompile(`^\s*#`)
 
-	var startingKey keyMap
+	startingKey := newKeyMap()
 	if k, ok := parseKeyMap([]byte(initKey)); ok {
 		startingKey = k
 	}
@@ -109,14 +113,18 @@ func main() {
 			continue
 		}
 
-		if k, ok := parseKeyMap(line); ok {
-			key = k
+		if bytes.Contains(line, []byte("=")) {
+			if k, ok := parseKeyMap(line); ok {
+				key = k
+			} else {
+				fmt.Printf("Skipping invalid key map on line %v\n", lno)
+			}
 			continue
 		}
 
 		cg, err := newCryptogram(line)
 		if err != nil {
-			fmt.Printf("skipping cryptogram on line %v: %v", lno, err)
+			fmt.Printf("skipping cryptogram on line %v: %v\n", lno, err)
 			continue
 		}
 		if cg.nrWords() < 1 {
@@ -144,26 +152,38 @@ func main() {
 		// to our solution set.
 		sch := make(chan solution)
 		nrFound := 0
+
+		var wg sync.WaitGroup
+		wg.Add(1)
 		go func(sch chan solution) {
+			defer wg.Done()
+			dump := func() {
+				fmt.Println("Found:", nrFound)
+				ss.dump()
+				fmt.Println()
+			}
+
 			for s := range sch {
 				nrFound++
 
-				if ss.add(s) {
-					fmt.Println("Found:", nrFound)
-					ss.dump()
-					fmt.Println()
+				if ss.add(s) && progress {
+					dump()
 				}
 
 				if maxSolutions > 0 && nrFound >= maxSolutions {
 					cancelFunc()
-					return
+					break
 				}
+			}
+
+			if !progress {
+				dump()
 			}
 		}(sch)
 
 		// Now we can start the solver for this cryptogram
 		start := time.Now()
-		fmt.Printf("\n%v\n", cg)
+		fmt.Printf("\nSolving: %v\n", cg)
 		fmt.Printf("Using Key: %v\n", cg.initialMap)
 
 		// Won't return until all workers have stopped, which means
@@ -173,6 +193,7 @@ func main() {
 		// Tidy up
 		cancelFunc() // Will shut down the signal handler if it's still running
 		close(sch)   // Shuts down our solution reader routine
+		wg.Wait()
 
 		fmt.Println("Evaluated", nrFound, "solutions in", time.Now().Sub(start))
 
