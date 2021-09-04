@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -136,26 +137,20 @@ func (m wordMap) sort() {
 	}
 }
 
-func (m *wordMap) readWordList(fn string) {
+func (m *wordMap) readWordList(r io.Reader) {
 	*m = wordMap{
 		words:   make(map[string]word),
 		pattern: make(map[int][]word),
 	}
 
-	lfh, err := os.Open(fn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer lfh.Close()
-
-	s := bufio.NewScanner(lfh)
+	s := bufio.NewScanner(r)
 	lno := 0
 	nrLetters := 0
 	for s.Scan() {
 		lno++
 		w, err := parseFreqLine(s.Bytes())
 		if err != nil {
-			fmt.Printf("%v: %v on line %v", fn, err, lno)
+			fmt.Printf("Frequency List Error: %v on line %v\n", err, lno)
 			continue
 		}
 
@@ -176,6 +171,19 @@ func (m *wordMap) readWordList(fn string) {
 	// Sort each list in descending order of frequency
 	m.sort()
 	//m.dispFreqs()
+}
+
+func (m *wordMap) readWordListFile(fn string) {
+	lfh, err := os.Open(fn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer lfh.Close()
+	m.readWordList(lfh)
+}
+
+func (m *wordMap) readWordListData(data []byte) {
+	m.readWordList(bytes.NewReader(data))
 }
 
 type freqs struct {

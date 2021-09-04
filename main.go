@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"io"
@@ -32,10 +33,13 @@ var (
 	progress     bool
 )
 
+//go:embed freqc.txt
+var freqData []byte
+
 var words = wordMap{}
 
 func main() {
-	flag.StringVar(&freqFile, "f", "freqc.txt", "Word frequency list")
+	flag.StringVar(&freqFile, "f", "", "Word frequency list")
 	flag.DurationVar(&maxRuntime, "r", 0, "Quit after this amount of time. Ex: 30s or 1m")
 	flag.IntVar(&topN, "topn", 5, "Display top N solutions each time one is found")
 	flag.IntVar(&maxSolutions, "s", 0, "Stop searching after finding this many solutions")
@@ -74,7 +78,13 @@ func main() {
 	}
 
 	// Read and parse word frequency list
-	words.readWordList(freqFile)
+	if freqFile != "" {
+		fmt.Println("Reading freqs from", freqFile)
+		words.readWordListFile(freqFile)
+	} else {
+		fmt.Println("Using embedded word frequency data")
+		words.readWordListData(freqData)
+	}
 
 	var cgFile io.ReadCloser
 	var err error
