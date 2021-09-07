@@ -83,7 +83,7 @@ func (s *solution) score(cg cryptogram) {
 		}
 
 		x := words.find(w.letters)
-		s.wordScore += float64(x.freq*w.freq) / float64(len(cg.words))
+		s.wordScore += float64(x.freq) / float64(words.maxPatternFreq[w.pattern])
 
 		for _, c := range w.letters {
 			//fmt.Printf("%c %0.2f", c, words.letterPct[c])
@@ -91,6 +91,7 @@ func (s *solution) score(cg cryptogram) {
 		}
 	}
 	s.letterScore = s.letterScore / float64(cg.nrLetters) / words.maxLetterPct * 100
+	s.wordScore = s.wordScore / float64(len(cg.words)) * 100
 }
 
 func (s *solution) decode(cg cryptogram) {
@@ -121,7 +122,7 @@ func (s solution) decodedString(cg cryptogram) string {
 
 	s.score(cg)
 
-	ret = fmt.Sprintf("Letter: %8.6f%%  Word: %f  ", s.letterScore, s.wordScore)
+	ret = fmt.Sprintf("Letter: %8.6f%%  Word: %f%%  ", s.letterScore, s.wordScore)
 	for _, w := range s.decoded {
 		ret += string(w.letters)
 	}

@@ -126,6 +126,8 @@ func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, s solution, cg
 	if !s.tryWord(cgWords[0], start) {
 		s.nrUnsolved++
 		if s.nrUnsolved > maxUnsolved {
+			//s.score(cg)
+			//sch <- s
 			return
 		}
 		triedUnknown = true
@@ -133,6 +135,7 @@ func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, s solution, cg
 
 	if len(cgWords[1:]) < 1 {
 		// no encrypted words left to solve for, send our solution
+		//s.score(cg)
 		sch <- s
 		return
 	}

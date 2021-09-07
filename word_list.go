@@ -21,11 +21,12 @@ type word struct {
 }
 
 type wordMap struct {
-	words        map[string]word
-	pattern      map[int][]word
-	letterFreq   [256]int
-	letterPct    [265]float64
-	maxLetterPct float64
+	words          map[string]word
+	pattern        map[int][]word // list of words for a given pattern
+	maxPatternFreq map[int]int    // maximum frequency for a given pattern
+	letterFreq     [256]int       // frequency of each letter
+	letterPct      [265]float64   // percentage each letter appears in source text
+	maxLetterPct   float64        // the highest percentage for a single letter
 }
 
 func (w word) String() string {
@@ -129,6 +130,9 @@ func (m wordMap) find(x []byte) word {
 func (m wordMap) store(w word) {
 	m.words[string(w.letters)] = w
 	m.pattern[w.pattern] = append(m.pattern[w.pattern], w)
+	if w.freq > m.maxPatternFreq[w.pattern] {
+		m.maxPatternFreq[w.pattern] = w.freq
+	}
 }
 
 func (m wordMap) sort() {
@@ -139,8 +143,9 @@ func (m wordMap) sort() {
 
 func (m *wordMap) readWordList(r io.Reader) {
 	*m = wordMap{
-		words:   make(map[string]word),
-		pattern: make(map[int][]word),
+		words:          make(map[string]word),
+		pattern:        make(map[int][]word),
+		maxPatternFreq: make(map[int]int),
 	}
 
 	s := bufio.NewScanner(r)
