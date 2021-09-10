@@ -115,12 +115,6 @@ func (cg cryptogram) nrWords() int {
 	return len(cg.words)
 }
 
-type workerData struct {
-	solution
-	cgWords []*cryptogramWord
-	start   word
-}
-
 var solveWg sync.WaitGroup
 
 func (cg cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxUnsolved int, s solution, cgWords []*cryptogramWord, start word, sch chan solution) {
