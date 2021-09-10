@@ -153,7 +153,7 @@ func main() {
 		go func() {
 			select {
 			case <-sigs:
-				fmt.Println("Received stop signal...")
+				fmt.Println("Stopping solve of current cryptogram...")
 				cancelFunc()
 			case <-ctx.Done():
 				return
