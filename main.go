@@ -26,11 +26,12 @@ var (
 	maxSolutions int
 	maxUnknown   int
 	allowMapSelf bool
-	maxParallel  = runtime.NumCPU()
+	moreParallel int
 	cpuprofile   string
 	memprofile   string
 	initKey      string
 	progress     bool
+	partial      bool
 )
 
 //go:embed freqc.txt
@@ -45,11 +46,12 @@ func main() {
 	flag.IntVar(&maxSolutions, "s", 0, "Stop searching after finding this many solutions")
 	flag.IntVar(&maxUnknown, "u", 0, "Maximum allowed unknown words")
 	flag.BoolVar(&allowMapSelf, "map-self", false, "Allow encrypted letter to map to itself")
-	flag.IntVar(&maxParallel, "w", maxParallel, "Number of worker threads to run")
+	flag.IntVar(&moreParallel, "m", moreParallel, "Use more parallelism, probably best to leave at 0 or maybe 1")
 	flag.StringVar(&cpuprofile, "cpuprofile", "", "Write cpu profile to 'file'")
 	flag.StringVar(&memprofile, "memprofile", "", "Write memory profile to 'file'")
 	flag.StringVar(&initKey, "key", "", "Initial key mapping in the form 'ABC=XYZ[, ]...'")
 	flag.BoolVar(&progress, "p", false, "Display solutions as they're found instead of only when complete")
+	flag.BoolVar(&partial, "P", false, "Evaluate all partial solutions, much slower but may be useful with -p")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
@@ -60,10 +62,6 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-
-	if maxParallel < 1 {
-		maxParallel = 1
-	}
 
 	if cpuprofile != "" {
 		f, err := os.Create(cpuprofile)
@@ -124,6 +122,9 @@ func main() {
 		}
 
 		if bytes.Contains(line, []byte("=")) {
+			if initKey != "" {
+				continue
+			}
 			if k, ok := parseKeyMap(line); ok {
 				key = k
 			} else {
@@ -152,6 +153,7 @@ func main() {
 		go func() {
 			select {
 			case <-sigs:
+				fmt.Println("Received stop signal...")
 				cancelFunc()
 			case <-ctx.Done():
 				return

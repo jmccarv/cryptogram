@@ -121,13 +121,24 @@ type workerData struct {
 	start   word
 }
 
-func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, s solution, cgWords []*cryptogramWord, start word, sch chan solution) {
+var solveWg sync.WaitGroup
+
+func (cg cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxUnsolved int, s solution, cgWords []*cryptogramWord, start word, sch chan solution) {
 	triedUnknown := false
+
+	if wg != nil {
+		defer wg.Done()
+	}
+
 	if !s.tryWord(cgWords[0], start) {
 		s.nrUnsolved++
 		if s.nrUnsolved > maxUnsolved {
-			//s.score(cg)
-			//sch <- s
+			if partial {
+				select {
+				case sch <- s:
+				case <-ctx.Done():
+				}
+			}
 			return
 		}
 		triedUnknown = true
@@ -135,42 +146,34 @@ func (cg cryptogram) solveR(ctx context.Context, maxUnsolved int, s solution, cg
 
 	if len(cgWords[1:]) < 1 {
 		// no encrypted words left to solve for, send our solution
-		//s.score(cg)
-		sch <- s
+		select {
+		case sch <- s:
+		case <-ctx.Done():
+		}
 		return
 	}
-
-	cgWords = cgWords[1:]
 
 	if ctx.Err() != nil {
 		return
 	}
 
+	cgWords = cgWords[1:]
+
+	try := func(w word) {
+		if spawn > 0 {
+			solveWg.Add(1)
+			go cg.solveR(ctx, &solveWg, spawn-1, maxUnsolved, s, cgWords, w, sch)
+		} else {
+			cg.solveR(ctx, nil, 0, maxUnsolved, s, cgWords, w, sch)
+		}
+	}
+
 	for _, w := range words.forPattern(cgWords[0].pattern) {
-		cg.solveR(ctx, maxUnsolved, s, cgWords, w, sch)
+		try(w)
 	}
 
 	if s.nrUnsolved < maxUnsolved && !triedUnknown {
-		cg.solveR(ctx, maxUnsolved, s, cgWords, word{}, sch)
-	}
-}
-
-func (cg cryptogram) solveWorker(ctx context.Context, maxUnsolved int, workCh chan workerData, sch chan solution) {
-	for {
-		var d workerData
-		var ok bool
-
-		select {
-		case d, ok = <-workCh:
-			if !ok {
-				return
-			}
-			break
-		case <-ctx.Done():
-			return
-		}
-
-		cg.solveR(ctx, maxUnsolved, d.solution, d.cgWords, d.start, sch)
+		try(word{})
 	}
 }
 
@@ -188,34 +191,16 @@ func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan soluti
 		return len(words.forPattern(cgWords[i].pattern)) < len(words.forPattern(cgWords[j].pattern))
 	})
 
-	wch := make(chan workerData)
-	// Spawn workers here
-	// cgWords
-	var wg sync.WaitGroup
-	for i := 0; i < maxParallel; i++ {
-		wg.Add(1)
-		go func() {
-			cg.solveWorker(ctx, maxUnsolved, wch, sch)
-			wg.Done()
-		}()
-	}
-
 	try := func(w word) {
-		s := solution{keyMap: cg.initialMap}
-		wch <- workerData{solution: s, cgWords: cgWords, start: w}
+		solveWg.Add(1)
+		go cg.solveR(ctx, &solveWg, moreParallel, maxUnsolved, solution{keyMap: cg.initialMap}, cgWords, w, sch)
 	}
-	fmt.Printf("%s has %d possible solutions\n", string(cgWords[0].letters), len(words.forPattern(cgWords[0].pattern)))
 
 	for _, w := range words.forPattern(cgWords[0].pattern) {
-		if ctx.Err() != nil {
-			break
-		}
-
 		try(w)
 	}
 	if maxUnknown > 0 {
 		try(word{})
 	}
-	close(wch)
-	wg.Wait()
+	solveWg.Wait()
 }

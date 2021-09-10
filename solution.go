@@ -86,8 +86,7 @@ func (s *solution) score(cg cryptogram) {
 		s.wordScore += float64(x.freq) / float64(words.maxPatternFreq[w.pattern])
 
 		for _, c := range w.letters {
-			//fmt.Printf("%c %0.2f", c, words.letterPct[c])
-			s.letterScore += words.letterPct[c] * float64(w.freq)
+			s.letterScore += words.letterPct[c]
 		}
 	}
 	s.letterScore = s.letterScore / float64(cg.nrLetters) / words.maxLetterPct * 100
