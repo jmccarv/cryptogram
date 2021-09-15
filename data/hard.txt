@@ -1,7 +1,7 @@
 # Try -P -u 1
 # Or  -m 1 -P -u 1
-o=u r=b i=f a=m m=y jvh=was gyvld=place
+# o=u r=b i=f a=m m=y jvh=was gyvld=place
 bndxd jvh dvhd zc lvhdm'h avccdx vh nd hbdgb zcbp nzh gyvld, bndxd jvh gxzfd zc lvhdm'h rdvxzct vcf v hazyd pc lvhdm'h ivld, vcf jndc xdhgpcfzct bp bnd lnddxh nd yztnbym fpib nzh nvb, cp hbxvctdx zc bnd lxpjf lpoyf fporb, 'b jvh lvhdm vb bnd rvb.
 
 # This one requires -u 1 as it has an unknown proper name
-PKT YTUJ MHSN JMCU FMHIY JK INHFM JMN WCXXHFZN. CJ CU YHEN KL NSNIPJMCXD HXE KL XKJMCXD, JMN UJICSCXD RCZZ,  JMN ZKKA, JMN RHZA, JMN WIKWKIJCKXU KL JMN GKEP, JMN UKTXE KL JMN SKCFN, JMN NHUN KL JMN DNUJTINU. UHIHM GNIXMHIEJ
+# PKT YTUJ MHSN JMCU FMHIY JK INHFM JMN WCXXHFZN. CJ CU YHEN KL NSNIPJMCXD HXE KL XKJMCXD, JMN UJICSCXD RCZZ,  JMN ZKKA, JMN RHZA, JMN WIKWKIJCKXU KL JMN GKEP, JMN UKTXE KL JMN SKCFN, JMN NHUN KL JMN DNUJTINU. UHIHM GNIXMHIEJ

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	//"sync/atomic"
 )
 
 type cryptogramWord struct {
@@ -22,6 +23,8 @@ type cryptogram struct {
 	uniqueWords map[string]*cryptogramWord
 	nrLetters   int // number of non-whitespace characters
 	initialMap  keyMap
+	//nrSkips     uint64
+	//nrTried     uint64
 }
 
 var validLetter [256]bool
@@ -117,13 +120,14 @@ func (cg cryptogram) nrWords() int {
 
 var solveWg sync.WaitGroup
 
-func (cg cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxUnsolved int, s solution, cgWords []*cryptogramWord, start word, sch chan solution) {
+func (cg *cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxUnsolved int, s solution, cgWords []*cryptogramWord, start word, sch chan solution) {
 	triedUnknown := false
 
 	if wg != nil {
 		defer wg.Done()
 	}
 
+	//atomic.AddUint64(&cg.nrTried, 1)
 	if !s.tryWord(cgWords[0], start) {
 		s.nrUnsolved++
 		if s.nrUnsolved > maxUnsolved {
@@ -138,7 +142,44 @@ func (cg cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxU
 		triedUnknown = true
 	}
 
-	if len(cgWords[1:]) < 1 {
+	cgWords = cgWords[1:]
+	i := 0
+	wordSolved := true
+	for ; i < len(cgWords) && wordSolved; i++ {
+		x := make([]byte, 0, 64)
+		for _, c := range cgWords[i].letters {
+			if s.key[c] == 0 {
+				wordSolved = false
+				break
+			}
+			x = append(x, s.key[c])
+		}
+
+		if wordSolved {
+			//atomic.AddUint64(&cg.nrSkips, uint64(len(words.forPattern(cgWords[i].pattern))))
+			if _, ok := words.words[string(x)]; !ok {
+				s.nrUnsolved++
+				if s.nrUnsolved > maxUnsolved {
+					//fmt.Println("Unknown word with solution", string(cgWords[i].letters), string(x))
+					if partial {
+						select {
+						case sch <- s:
+						case <-ctx.Done():
+						}
+					}
+					return
+				}
+			}
+		}
+	}
+
+	if wordSolved {
+		cgWords = []*cryptogramWord{}
+	} else if i > 0 {
+		cgWords = cgWords[i-1:]
+	}
+
+	if len(cgWords) < 1 {
 		// no encrypted words left to solve for, send our solution
 		select {
 		case sch <- s:
@@ -150,8 +191,6 @@ func (cg cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxU
 	if ctx.Err() != nil {
 		return
 	}
-
-	cgWords = cgWords[1:]
 
 	try := func(w word) {
 		if spawn > 0 {
@@ -171,7 +210,7 @@ func (cg cryptogram) solveR(ctx context.Context, wg *sync.WaitGroup, spawn, maxU
 	}
 }
 
-func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan solution) {
+func (cg *cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan solution) {
 	// Get a list of the unique code words to solve.
 	cgWords := make([]*cryptogramWord, 0, len(cg.uniqueWords))
 	for _, x := range cg.uniqueWords {
@@ -197,4 +236,7 @@ func (cg cryptogram) solve(ctx context.Context, maxUnsolved int, sch chan soluti
 		try(word{})
 	}
 	solveWg.Wait()
+
+	//fmt.Println("nr tried", cg.nrTried)
+	//fmt.Println("nr skips", cg.nrSkips)
 }
