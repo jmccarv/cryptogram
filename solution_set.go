@@ -45,8 +45,12 @@ func (ss *solutionSet) add(s solution) bool {
 	return true
 }
 
-func (ss solutionSet) dump() {
+func (ss solutionSet) dump(includeKey bool) {
 	for _, s := range ss.set {
+		if includeKey {
+			fmt.Println("encoded", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+			fmt.Println("decoded", s)
+		}
 		fmt.Println(s.decodedString(ss.cg))
 	}
 }

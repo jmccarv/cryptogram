@@ -32,6 +32,7 @@ var (
 	initKey      string
 	progress     bool
 	partial      bool
+	includeKey   bool
 )
 
 //go:embed freqc.txt
@@ -52,6 +53,7 @@ func main() {
 	flag.StringVar(&initKey, "key", "", "Initial key mapping in the form 'ABC=XYZ[, ]...'")
 	flag.BoolVar(&progress, "p", false, "Display solutions as they're found instead of only when complete")
 	flag.BoolVar(&partial, "P", false, "Evaluate all partial solutions, much slower but may be useful with -p")
+	flag.BoolVar(&includeKey, "v", false, "Include the key in the output for each solution")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
@@ -171,7 +173,7 @@ func main() {
 			defer wg.Done()
 			dump := func() {
 				fmt.Println("Found:", nrFound)
-				ss.dump()
+				ss.dump(includeKey)
 				fmt.Println()
 			}
 
