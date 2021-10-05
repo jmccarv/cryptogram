@@ -133,4 +133,8 @@ pattern, since the length affects the pattern of a word!
 Now we start by looking at each unique encrypted word. For each encrypted
 word (EW) we consider each possible word from our dictionary (DW).
 We try to populate our solution key, but if we've already assigned a
-mapping between an encrypted letter and a clear text letter
+mapping between an encrypted letter and a clear text letter we know
+this word will not work with our current mapping and so move on to the
+next word.
+
+More to come...
