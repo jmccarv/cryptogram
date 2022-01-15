@@ -26,8 +26,10 @@ VKFOSKO FV BZO QTOUB USBFNCBO BC BZO ICFVCS CX OSBZYVFUVL USN VYIOTVBFBFCS.
 We are trying to find the substitution key used to encrypt the message.
 We start with an empty key where each letter maps to nothing (null):
 
+```
   from: ABCDEFGHIJKLMNOPQRSTUVWXYZ
     to: __________________________
+```
 
 We have a list of known words (English in our case).
 Take one of the encrypted words and choose a word from our word
@@ -40,6 +42,7 @@ For example, using the above cryptogram, we might choose to try
 'THOUGHT' for the first encrypted word 'VKFOSKO'. In that case we
 would populate our solution key like so.
 
+```
   T
   from: ABCDEFGHIJKLMNOPQRSTUVWXYZ
     to: _____________________T____
@@ -63,6 +66,7 @@ would populate our solution key like so.
   H
   from: ABCDEFGHIJKLMNOPQRSTUVWXYZ
     to: _____O____H___U___G__T____
+```
 
 Now we get to the final 'T' and we have a problem, In our original encrypted
 word, 'VKFOSKO', the letter in this position is 'O', which we've already
@@ -73,16 +77,20 @@ ever trying a word like this that cannot be correct.
 
 Maybe the next word we try is 'INSTANT', which will fit. Then our key is:
 
+```
   from: ABCDEFGHIJKLMNOPQRSTUVWXYZ
     to: _____S____N___T___A__I____
+```
 
 Since we successfully found a word, we choose another encrypted word and
 try the same process again. Maybe we try the word 'INSTANT' for the
 encrypted word 'USBFNCBO'
 
+```
   I
   from: ABCDEFGHIJKLMNOPQRSTUVWXYZ
     to: _____O____H___U___G_IT____
+```
 
 When we try the 'N' we find that the encrypted letter 'S' already has a
 mapping in our key, to 'G'. So 'INSTANT' cannot fit in our current solution.
@@ -117,13 +125,17 @@ Even though the word is encrypted, it still has useful properties for us:
 Word lengths and patterns are useful in helping narrow our search for
 possible decodings of an encrypted word. Consider the following word:
 
+```
   MISSISSIPPI
+```
 
 We can calculate a pattern of letters for this word by assigning a
 number to each unique letter in the word, like so:
 
+```
   MISSISSIPPI
   12332332442
+```
 
 Any encrypted version of this word will have the same length and pattern.
 We can use this to our advantage to only consider words in our word list
